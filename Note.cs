@@ -1,0 +1,71 @@
+﻿using System.Data.SqlClient;
+
+namespace ProductivityApplication
+{
+    internal class Note
+    {
+        string _username;
+        string _title;
+        string _subject;
+        string _contents;
+
+        public Note(string title, string subject, string contents)
+        {
+            _title = title;
+            _subject = subject;
+            _contents = contents;
+        }
+
+        // Function to add note to database
+        public bool addToDatabase()
+        {
+            // Create connection string variable
+            string connectionString = "Data Source=DESKTOP-RVQ5B1D\\SQLEXPRESS;Initial Catalog=MyProductivity;Integrated Security=True";
+
+            // Query to get the username from the log table of logged in users
+            string query = "SELECT username FROM log WHERE id=(SELECT max(id) FROM log)";
+
+            using (SqlConnection connection = new SqlConnection(connectionString))
+            {
+                // Open the database connection
+                connection.Open();
+
+                using (SqlCommand command = new SqlCommand(query, connection))
+                {
+                    // Execute the data reader
+                    SqlDataReader reader = command.ExecuteReader();
+
+                    // While the reader is reading values
+                    while (reader.Read())
+                    {
+                        // Set the username attribute to the last username read
+                        _username = reader.GetString(0);
+                        break;
+                    }
+
+                    // Dispose of the current command and reader
+                    command.Dispose();
+                    reader.Close();
+                }
+
+                // Query to insert a new task into tasks table
+                query = "INSERT INTO notes (username, title, subject, contents) VALUES (@Username, @Title, @Subject, @Contents)";
+
+                using (SqlCommand command = new SqlCommand(query, connection))
+                {
+                    // Use paramaters to prevent SQL injection
+                    command.Parameters.AddWithValue("@Username", _username);
+                    command.Parameters.AddWithValue("@Title", _title);
+                    command.Parameters.AddWithValue("@Subject", _subject);
+                    command.Parameters.AddWithValue("@Contents", _contents);
+
+                    // Get rows affected
+                    int rowsAffected = command.ExecuteNonQuery();
+
+                    // If there are rows affected then successfully added
+                    return rowsAffected > 0;
+                }
+            }
+        }
+    }
+}
